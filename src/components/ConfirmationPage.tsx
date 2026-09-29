@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { CheckCircle2, Loader2, Heart, Home } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { getSupabase } from '@/lib/supabase';
 import { formatEuroDecimal, formatDate } from '@/lib/format';
 
 interface ConfirmationPageProps {
@@ -20,7 +20,7 @@ export function ConfirmationPage({ donationId, onBackHome }: ConfirmationPagePro
     let cancelled = false;
 
     async function fetchDonation() {
-      const { data, error } = await supabase
+      const { data, error } = await getSupabase()
         .from('donations')
         .select('status, amount_cents, created_at')
         .eq('id', donationId)
