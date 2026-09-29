@@ -1,0 +1,5 @@
+[functions.create-checkout]
+verify_jwt = false
+
+[functions.norpo-webhook]
+verify_jwt = false
