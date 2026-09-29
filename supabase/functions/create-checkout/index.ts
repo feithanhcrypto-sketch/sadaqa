@@ -62,24 +62,41 @@ Deno.serve(async (req: Request) => {
     if (norpoApiKey) {
       const amountDecimal = body.amount_cents / 100;
 
-      const norpoResponse = await fetch(`${NORPO_BASE_URL}/v1/payments`, {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${norpoApiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          amount: amountDecimal,
-          currency: "EUR",
-          reference: donation.id,
-        }),
-      });
+      let norpoResponse: Response;
+      try {
+        norpoResponse = await fetch(`${NORPO_BASE_URL}/v1/payments`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${norpoApiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            amount: amountDecimal,
+            currency: "EUR",
+            reference: donation.id,
+          }),
+        });
+      } catch (fetchErr) {
+        console.error("Norpo fetch error:", fetchErr);
+        return new Response(
+          JSON.stringify({ error: "Impossible de joindre Norpo. Verifiez votre connexion." }),
+          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
 
       if (!norpoResponse.ok) {
-        const errText = await norpoResponse.text();
-        console.error("Norpo API error:", errText);
+        let errMessage = "Erreur lors de la creation du paiement.";
+        try {
+          const errData = await norpoResponse.json();
+          console.error("Norpo API error:", JSON.stringify(errData));
+          if (errData.message) errMessage = errData.message;
+          else if (errData.error) errMessage = errData.error;
+        } catch {
+          const errText = await norpoResponse.text();
+          console.error("Norpo API error (text):", errText);
+        }
         return new Response(
-          JSON.stringify({ error: "Erreur lors de la creation du paiement." }),
+          JSON.stringify({ error: errMessage }),
           { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
@@ -91,7 +108,7 @@ Deno.serve(async (req: Request) => {
       if (!checkoutUrl) {
         console.error("Norpo response missing order.url:", JSON.stringify(norpoData));
         return new Response(
-          JSON.stringify({ error: "URL de paiement manquante." }),
+          JSON.stringify({ error: "URL de paiement manquante dans la reponse Norpo." }),
           { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }

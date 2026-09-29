@@ -11,17 +11,22 @@ export async function createCheckoutSession(params: {
   donor_email?: string;
   message?: string;
 }): Promise<CreateCheckoutResponse> {
-  const response = await fetch(`${EDGE_FUNCTION_URL}/create-checkout`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(params),
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${EDGE_FUNCTION_URL}/create-checkout`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(params),
+    });
+  } catch {
+    throw new Error('Impossible de joindre le serveur. Verifiez votre connexion.');
+  }
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ error: 'Erreur reseau' }));
+    const errorData = await response.json().catch(() => ({ error: `Erreur ${response.status}` }));
     throw new Error(errorData.error || `Erreur ${response.status}`);
   }
 
